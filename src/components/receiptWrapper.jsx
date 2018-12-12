@@ -14,8 +14,8 @@ class ReceiptWrapper extends Component {
          <div
             className="card"
             style={{
-               height: '100vh',
-               width: '50%'
+               height: '90vh',
+               width: '100%'
             }}
          >
             <h3 className="card-title">{name}</h3>

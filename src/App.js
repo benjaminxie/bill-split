@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import ReceiptWrapper from './components/receiptWrapper';
-import './App.css';
 import HideableContainer from './components/hideableContainer';
 import ItemWrapper from './components/itemWrapper';
 
@@ -25,41 +24,65 @@ class App extends Component {
       return (
          <div>
             {this.renderReceiptWrappers(receiptStates)}
-            <HideableContainer text={'add receipt'}>
-               <form onSubmit={this.handleAddReceipt}>
-                  <input
-                     type="text"
-                     name="name"
-                     placeholder="name"
-                     ref={this.input}
-                  />
-                  <button
-                     type="submit"
-                     className="btn-outline-secondary btn-lg"
-                  >
-                     add receipt
-                  </button>
-               </form>
-            </HideableContainer>
+            {this.renderAddReceiptForm()}
          </div>
       );
    }
 
-   renderReceiptWrappers(receiptStates) {
+   computeMasterReceiptItems = receiptStates => {
+      const nameToQuantity = new Map();
+      const nameToUnitPrice = new Map();
+
+      for (let receipt of receiptStates) {
+         if (receipt.name !== 'Master Receipt') {
+            this.tally(receipt, nameToUnitPrice, nameToQuantity);
+         }
+      }
+
+      const masterReceiptItems = [];
+      let itemId = 0;
+      for (let name of nameToQuantity.keys()) {
+         masterReceiptItems.push({
+            itemId: itemId++,
+            quantity: nameToQuantity.get(name),
+            name: name,
+            unitPrice: nameToUnitPrice.get(name)
+         });
+      }
+      return masterReceiptItems;
+   };
+
+   tally = (receipt, nameToUnitPrice, nameToQuantity) => {
+      // This could be done with a reduce instead
+      const { items } = receipt;
+      for (let item of items) {
+         const { quantity, name, unitPrice } = item;
+         if (!nameToUnitPrice.has(name)) {
+            nameToUnitPrice.set(name, unitPrice);
+         }
+         const oldQuantity = nameToQuantity.get(name) || 0;
+         nameToQuantity.set(name, oldQuantity + quantity);
+      }
+   };
+
+   renderReceiptWrappers = receiptStates => {
       return receiptStates.map(receipt => {
          const { receiptId, items, name } = receipt;
-         return (
-            <ReceiptWrapper
-               key={receiptId}
-               receiptId={receiptId}
-               name={name}
-               items={items}
-               renderItemWrappers={this.renderItemWrappers}
-               addItem={this.handleAddItem}
-            />
+         const out = (
+            <div>
+               <ReceiptWrapper
+                  key={receiptId}
+                  receiptId={receiptId}
+                  name={name}
+                  items={items}
+                  renderItemWrappers={this.renderItemWrappers}
+                  addItem={this.handleAddItem}
+               />
+            </div>
          );
+         return out;
       });
-   }
+   };
 
    renderItemWrappers = (items, receiptId) => {
       return items.map(item => {
@@ -80,6 +103,22 @@ class App extends Component {
       });
    };
 
+   renderAddReceiptForm = () => (
+      <HideableContainer text={'add receipt'}>
+         <form onSubmit={this.handleAddReceipt}>
+            <input
+               type="text"
+               name="name"
+               placeholder="name"
+               ref={this.input}
+            />
+            <button type="submit" className="btn-outline-secondary btn-lg">
+               add receipt
+            </button>
+         </form>
+      </HideableContainer>
+   );
+
    handleAddReceipt = event => {
       event.preventDefault();
 
@@ -96,11 +135,8 @@ class App extends Component {
    };
 
    handleAddItem = (receiptId, newItem) => {
-      const receiptStates = [...this.state.receiptStates].map(receiptState => {
-         if (
-            receiptState.receiptId === receiptId ||
-            receiptState.receiptId === 0
-         ) {
+      const receiptStates = this.state.receiptStates.map(receiptState => {
+         if (receiptState.receiptId === receiptId) {
             const newItems = [...receiptState.items];
             const { quantity, name, unitPrice } = newItem;
 
@@ -121,7 +157,9 @@ class App extends Component {
             return receiptState;
          }
       });
-
+      if (receiptId !== 0) {
+         receiptStates[0].items = this.computeMasterReceiptItems(receiptStates);
+      }
       this.setState({
          receiptStates
       });
@@ -164,7 +202,9 @@ class App extends Component {
       );
 
       itemToChange.quantity = newQuantity;
-
+      newReceiptStates[0].items = this.computeMasterReceiptItems(
+         newReceiptStates
+      );
       this.setState(newReceiptStates);
    };
 }

@@ -32,6 +32,7 @@ class HideableContainer extends Component {
 
    handleTogglingHide = () => {
       const { hiding } = this.state;
+      console.log({ hiding });
       this.setState({
          hiding: !hiding
       });
