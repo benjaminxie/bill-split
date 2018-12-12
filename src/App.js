@@ -186,7 +186,9 @@ class App extends Component {
       }
       receiptToChange.items = newItems;
 
-      console.log(newItems);
+      newReceiptStates[0].items = this.computeMasterReceiptItems(
+         newReceiptStates
+      );
 
       this.setState(newReceiptStates);
    };
